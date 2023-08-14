@@ -14,6 +14,7 @@ from functools import wraps
 import time
 import numpy as np
 import pyfiglet
+from pprint import pprint
 
 # Globals
 # variants_color = {
@@ -150,6 +151,7 @@ def delete_multiple_element(list_object, indices):
 def map_annotations(field_annot):
     if field_annot is not None:
         uniq = list(set(str(field_annot).split("|")))
+        # uniq = list(set(str(field_annot)))
         # if len(uniq) == 1:
         #    return uniq[0]
         # else:
@@ -160,24 +162,6 @@ def map_annotations(field_annot):
 
 
 def generate_hovertext_var(variants_list, full_annot=None, true_annot=None) -> Generator:
-    # print(self.data["Variants"])
-    # print(len(self.data["Variants"]))
-    # print(len(self.data["Chromosomes"]))
-    # exit()
-    # dict containing INFO field for each var
-    # print(variants_list)
-    # for var in variants_list:
-    #    yield "<br>".join(
-    #        [
-    #            ": ".join(
-    #                [
-    #                    str(value) if not isinstance(value, list) else str(value[0])
-    #                    for value in pairs
-    #                ]
-    #            )
-    #            for pairs in list(zip(var.keys(), var.values()))
-    #        ]
-    #    )
     # 30 longueur char
     # 15 hauteur annot
     for var in variants_list:
@@ -198,9 +182,9 @@ def generate_hovertext_var(variants_list, full_annot=None, true_annot=None) -> G
                 if i == 15:
                     break
             if not isinstance(pairs[1], list):
-                tmp.append(":".join([pairs[0], list(map(map_annotations, [pairs[1]]))[0]]))
+                tmp.append(":".join([pairs[0], str(pairs[1])]))
             else:
-                tmp.append(": ".join([pairs[0], ",".join(list(map(map_annotations, pairs[1])))]))
+                tmp.append(": ".join([pairs[0], str(pairs[1][0])]))
         to_add = []
         for items in tmp:
             if len(items) > 40:
@@ -208,6 +192,7 @@ def generate_hovertext_var(variants_list, full_annot=None, true_annot=None) -> G
                 to_add.append(items)
             else:
                 to_add.append(items)
+        # exit()
         yield "<br>".join(to_add)
         # exit()
         # "SV_chrom",
@@ -221,40 +206,18 @@ def generate_hovertext_var(variants_list, full_annot=None, true_annot=None) -> G
 # "ACMG",
 # "varankVarScore",
 # "gene",
-# "zygisity",
+# "zygosity",
 # "rsClinicalSignificance",
 # "OMIM_ID",
 # "OMIM_inheritance",
-# "OMIM_phenotype"
-
-
-# def generate_hovertext_var(variants_list) -> Generator:
-#    # print(self.data["Variants"])
-#    # print(len(self.data["Variants"]))
-#    # print(len(self.data["Chromosomes"]))
-#    # exit()
-#    # dict containing INFO field for each var
-#    for var in variants_list:
-#        yield "<br>".join(
-#            [
-#                ": ".join(
-#                    [
-#                        str(value) if not isinstance(value, list) else str(value[0])
-#                        for value in pairs
-#                    ]
-#                )
-#                for pairs in list(zip(var.keys(), var.values()))
-#            ]
-#        )
 
 
 def cast_svtype(svtype):
     """
-    In case of pip in svtype
+    Handle "<" in vcf
     """
-    if isinstance(svtype, list) and len(svtype) == 1:
+    if isinstance(svtype, list):
         svtype = svtype[0]
-    svtype = svtype.split("|")[0]
     if "<" in svtype or ">" in svtype:
         svtype = svtype.replace("<", "")
         svtype = svtype.replace(">", "")
@@ -660,21 +623,84 @@ def _gc_hg38(filedata, span, length, out):
             # chr_current.append(chrom)
 
 
+def isdigit_float(string):
+    if "." in string:
+        numeric = string.split(".")[0]
+        decimal = string.split(".")[1]
+        if numeric.isdigit() and len(decimal) <= 2 and decimal.isdigit():
+            return True
+        else:
+            return False
+    else:
+        return False
+
+
+def full_split_annotSV():
+    if len(val) > 1:
+        length = len(val)
+        tmp = "|".join(val)
+        data[key] = [
+            ",".join(tmp.split("|")[length:]),
+            "|".join(tmp.split("|")[length:]),
+        ]
+
+
 def process_info_dict(data: dict) -> dict:
     """
     From a vcf.Record.INFO which is a dict if list contains only one string containing pipe split all values and cast string to int if values contains only digit
     \nreturn dict formatted
     """
+    new_data = {}
+
     for key, val in data.items():
-        if isinstance(val, list):
-            if len(val) == 1 and isinstance(val[0], str):  # bad meta header need to fix
-                if "|" in val[0]:
-                    values = val[0].split("|")
-                    for j, items in enumerate(values):
-                        if items.isdigit():
-                            values[j] = int(items)
-                    data[key] = values
-    return data
+        try:
+            if isinstance(val, list):
+                if len(val) == 1 and isinstance(val[0], str):
+                    if "|" in val[0]:
+                        values = val[0].split("|")
+                        new_values = []
+                        for items in values:
+                            if items.isdigit():
+                                new_values.append(int(items))
+                            elif isdigit_float(items):
+                                new_values.append(float(items))
+                            else:
+                                new_values.append(items)
+                        new_data[key] = new_values
+                    elif val[0].isdigit():
+                        new_data[key] = int(val[0])
+                    else:
+                        new_data[key] = val
+                elif len(val) > 1 and "|" in val[-1]:
+                    tmp = ",".join(val)
+                    keep = tmp.split("|")[0].split(",")
+                    keep.append("|".join(tmp.split("|")[1:]))
+                    new_data[key] = keep
+                else:
+                    new_data[key] = val
+            elif isinstance(val, str) and "|" in val:
+                new_values = []
+                values = val.split("|")
+                for items in values:
+                    if items.isdigit():
+                        new_values.append(int(items))
+                    elif isdigit_float(items):
+                        new_values.append(float(items))
+                    else:
+                        new_values.append(items)
+                new_data[key] = new_values
+            else:
+                if val.isdigit():
+                    new_data[key] = int(val)
+                elif isdigit_float(val):
+                    new_data[key] = float(val)
+                else:
+                    new_data[key] = val
+        except (TypeError, AttributeError):
+            new_data[key] = val
+    # pprint(new_data, sort_dicts=False)
+    # exit()
+    return new_data
 
 
 def process_gc_percent(filename: str, out: str) -> str:
