@@ -14,7 +14,7 @@ import pandas as pd
 # from vcf2circos.vcfreader import VcfReader
 from os.path import join as osj
 from tqdm import tqdm
-from vcf2circos.utils import timeit, cast_svtype
+from vcf2circos.utils import timeit, cast_svtype, process_info_dict
 from pprint import pprint
 import vcf
 import time
@@ -148,6 +148,9 @@ class Plotconfig:
         self.breakend_record = []
         # self.breakend_genes = []
         for record in self.vcf_reader:
+            # ensure all values are list of str without taking into account type in metaheader in record.INFO
+            record.INFO = process_info_dict(record.INFO)
+
             # Could now do filter to only plot some specific gene or chromosomes
             if (
                 self.chr_adapt(record) in self.options["Chromosomes"]["list"]
@@ -166,7 +169,7 @@ class Plotconfig:
                     data["Record"].append(record)
                     data["Variants"].append(record.INFO)
                     svtype, copynumber = self.get_copynumber_type(record)
-                    #if record.CHROM == "chr6" and record.POS == 1089464612 :
+                    # if record.CHROM == "chr6" and record.POS == 1089464612 :
                     #    print(record)
                     #    print(record.INFO)
                     #    print(self.get_copynumber_type(record))
@@ -374,7 +377,7 @@ class Plotconfig:
             exit()
 
     def get_sv_length_annotations(self, record, field):
-        #if field == "SV_end":
+        # if field == "SV_end":
         #    gene_name = self.find_record_gene(
         #        [
         #            record.CHROM,
@@ -383,22 +386,20 @@ class Plotconfig:
         #        ]
         #    )
         #    return gene_name
-        #if isinstance(record.INFO[field], int):
+        # if isinstance(record.INFO[field], int):
         #    gene_name = self.find_record_gene(
         #        [record.CHROM, record.POS, int(record.POS) + record.INFO[field]]
         #    )
         if field in ["SV_length", "SVLEN"]:
             gene_name = self.find_record_gene(
-                [record.CHROM, record.POS, record.POS+abs(record.INFO[field])]
+                [record.CHROM, record.POS, record.POS + abs(record.INFO[field])]
             )
         elif field in ["SV_end", "END"]:
-            gene_name = self.find_record_gene(
-                [record.CHROM, record.POS, record.INFO[field]]
-            )
+            gene_name = self.find_record_gene([record.CHROM, record.POS, record.INFO[field]])
         else:
             gene_name = []
         return gene_name
-        #elif isinstance(record.INFO[field], list):
+        # elif isinstance(record.INFO[field], list):
         #    if isinstance(record.INFO[field][0], int):
         #        gene_name = self.find_record_gene(
         #            [
@@ -415,7 +416,7 @@ class Plotconfig:
         #                int(record.POS) + int(float(self.string_to_unique(record.INFO[field][0]))),
         #            ]
         #        )
-        #else:
+        # else:
         #    gene_name = self.find_record_gene(
         #        [
         #            record.CHROM,
@@ -423,7 +424,7 @@ class Plotconfig:
         #            int(record.POS) + int(float(self.string_to_unique(record.INFO[field])[0])),
         #        ]
         #    )
-        #return gene_name
+        # return gene_name
 
     def get_genes_var(self, record: object) -> str:
         """
@@ -433,7 +434,7 @@ class Plotconfig:
         """
         bad_values = [None, "", "."]
         bad_svtype = ["BND", "TRA", None]
-        types_ = ["SVLEN", "SV_length","SV_end", "END"]
+        types_ = ["SVLEN", "SV_length", "SV_end", "END"]
 
         gene_name = record.INFO.get("Gene_name")
         # Add chr if missing
@@ -446,10 +447,10 @@ class Plotconfig:
                 return self.from_gene_to_unique(gene_name)
             # No Gene_name annotation need to find overlapping gene in sv
             # if gene_name is None or (isinstance(gene_name, list) and gene_name[0] == None):
-        #if (
+        # if (
         #    record.INFO.get("SVTYPE") not in bad_svtype
         #    or record.INFO.get("SV_type") not in bad_svtype
-        #):
+        # ):
         if any([val for val in types_ if val in record.INFO]):
             try:
                 gene_name = self.get_sv_length_annotations(record, "SVLEN")
@@ -469,9 +470,9 @@ class Plotconfig:
                             return ",".join(gene_name)
                         except (KeyError, ValueError, TypeError):
                             print(
-                            "ERROR missing SVLEN annotation for record ",
-                            record,
-                        )
+                                "ERROR missing SVLEN annotation for record ",
+                                record,
+                            )
                         exit()
         # SNV indel
         else:
