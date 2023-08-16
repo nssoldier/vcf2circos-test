@@ -79,7 +79,7 @@ def test_get_genes_var():
 def test_datafactory_type():
     # pc = generate_testing_data(input_files_transloc)
     plots = []
-    plots_expected = ["ideogram", "cytoband", "histogram", "link"]
+    plots_expected = ["ideogram", "ring", "cytoband", "histogram", "link"]
     for k in Datafactory(input_files_transloc, options).plot_dict()["Category"]:
         plots.append(k)
     assert plots == plots_expected, (
