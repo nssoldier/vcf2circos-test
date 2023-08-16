@@ -51,7 +51,7 @@ optional arguments:
   -p OPTIONS, --options OPTIONS
                         Options file in json format
   -a ASSEMBLY, --assembly ASSEMBLY
-                        Genome assembly to use for now values available (hg19, hg38)
+                        Genome assembly to use for now values available (hg19, hg38, mm9, mm10)
 ```
 
 <br/>
@@ -86,12 +86,55 @@ Regarding where you place your configuration folder previously downloaded, you n
 
 <br/>
 
+## Create assembly data (only once)
+If you are working with an assembly not provided in vcf2circos, you can build your own required files by following those steps:
+## 1) Download refSeq ncbi from UCSC web server, files: ncbiRefSeqCurated.txt.gz, chromInfo.txt.gz, cytoBand.txt.gz  [FTP](https://hgdownload.soe.ucsc.edu/gbdb/) 
+Unzip refseq file 
+```
+bgzip -d ncbirefseqfile
+```
+Sort by chromosome then position
+```
+sort -k1,1V -k2,2n file > sortedfile
+```
+
+## 2) Process files
+A python func is available in utils.py to process ncbiRefSeqCurated.txt, run it from directory containing the python module in vcf2circos ( assembly ex: "hg19")
+<br/>
+Create a folder with the assembly name in the Assembly folder in the config directory
+```
+python -c "from utils import formatted_refgene; formatted_refgene('path of ncbirefseq file', 'assembly')"
+```
+Creating: <br/>
+&emsp;genes.(assemblyname).txt <br/>
+&emsp;exons.(assemblyname).txt <br/>
+&emsp;transcripts.(assemblyname).txt <br/>
+
+(rename each files in (type).(assemblyname).sorted.txt if it's not already done)
+
+Decompress, sort and rename chromoInfo.txt > chr.(assemblyname).sorted.txt <br/>
+Add name of columns: *chr_name size*
+
+Finally cytoBand.txt.gz
+Add name of columns: *chr_name start end band band_color*
+Rename cytoband.txt.gz into cytoband_(assemblyname)_chr_infos.txt.gz
+
+Be carefull for cytoband band and band_color could be inverted (band_color should contains gneg, gpos100 etc)
+
+## 3) Now you have a new assembly available in vcf2circos, Enjoy
+
+```
+vcf2circos --input <vcf> --options <jsonfile> --output <outputpath>.html -a yournewassembly
+```
+
+<br/>
+
 # Usage
 
 ## Binary 
 
 ```
-$ vcf2circos --input config/Static/example.vcf.gz --options <jsonfile> --output <outputpath>.html -a <assembly hg19 or hg38>
+$ vcf2circos --input config/Static/example.vcf.gz --options <jsonfile> --output <outputpath>.html -a <assembly hg19, hg38, mm9 or mm10>
 
 ```
 
