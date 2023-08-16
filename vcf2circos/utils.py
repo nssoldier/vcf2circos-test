@@ -14,6 +14,7 @@ from functools import wraps
 import time
 import numpy as np
 import pyfiglet
+from pprint import pprint
 
 # Globals
 # variants_color = {
@@ -27,6 +28,7 @@ import pyfiglet
 #    "INDEL": "dimgray",
 #    "OTHER": "dimgray",
 # }
+
 
 # variants_color = {
 #    "INS": "#A52A2A",
@@ -149,9 +151,10 @@ def delete_multiple_element(list_object, indices):
 def map_annotations(field_annot):
     if field_annot is not None:
         uniq = list(set(str(field_annot).split("|")))
-        #if len(uniq) == 1:
+        # uniq = list(set(str(field_annot)))
+        # if len(uniq) == 1:
         #    return uniq[0]
-        #else:
+        # else:
         #    return field_annot
         return uniq[0]
     else:
@@ -159,26 +162,18 @@ def map_annotations(field_annot):
 
 
 def generate_hovertext_var(variants_list, full_annot=None, true_annot=None) -> Generator:
-    # print(self.data["Variants"])
-    # print(len(self.data["Variants"]))
-    # print(len(self.data["Chromosomes"]))
-    # exit()
-    # dict containing INFO field for each var
-    # print(variants_list)
-    # for var in variants_list:
-    #    yield "<br>".join(
-    #        [
-    #            ": ".join(
-    #                [
-    #                    str(value) if not isinstance(value, list) else str(value[0])
-    #                    for value in pairs
-    #                ]
-    #            )
-    #            for pairs in list(zip(var.keys(), var.values()))
-    #        ]
-    #    )
     # 30 longueur char
     # 15 hauteur annot
+    def crop_annotations(iterable):
+        # list(map(str, pairs[1]))[:-1]
+        iterable_string = list(map(str, iterable))
+        if len(iterable_string) == 1:
+            return iterable_string
+        elif len(iterable_string) == 2:
+            return [iterable_string[1]]
+        else:
+            return iterable_string[:-1]
+
     for var in variants_list:
         tmp = []
         for i, pairs in enumerate(list(zip(var.keys(), var.values()))):
@@ -197,16 +192,17 @@ def generate_hovertext_var(variants_list, full_annot=None, true_annot=None) -> G
                 if i == 15:
                     break
             if not isinstance(pairs[1], list):
-                tmp.append(":".join([pairs[0], list(map(map_annotations, [pairs[1]]))[0]]))
+                tmp.append(": ".join([pairs[0], str(pairs[1])]))
             else:
-                tmp.append(": ".join([pairs[0], ",".join(list(map(map_annotations, pairs[1])))]))
+                tmp.append(": ".join([pairs[0], ",".join(crop_annotations(pairs[1]))]))
         to_add = []
         for items in tmp:
-            if len(items) > 40:
-                items = "".join(items[:40]) + "..."
+            if len(items) > 60:
+                items = "".join(items[:60]) + "..."
                 to_add.append(items)
             else:
                 to_add.append(items)
+        # exit()
         yield "<br>".join(to_add)
         # exit()
         # "SV_chrom",
@@ -220,40 +216,18 @@ def generate_hovertext_var(variants_list, full_annot=None, true_annot=None) -> G
 # "ACMG",
 # "varankVarScore",
 # "gene",
-# "zygisity",
+# "zygosity",
 # "rsClinicalSignificance",
 # "OMIM_ID",
 # "OMIM_inheritance",
-# "OMIM_phenotype"
-
-
-# def generate_hovertext_var(variants_list) -> Generator:
-#    # print(self.data["Variants"])
-#    # print(len(self.data["Variants"]))
-#    # print(len(self.data["Chromosomes"]))
-#    # exit()
-#    # dict containing INFO field for each var
-#    for var in variants_list:
-#        yield "<br>".join(
-#            [
-#                ": ".join(
-#                    [
-#                        str(value) if not isinstance(value, list) else str(value[0])
-#                        for value in pairs
-#                    ]
-#                )
-#                for pairs in list(zip(var.keys(), var.values()))
-#            ]
-#        )
 
 
 def cast_svtype(svtype):
     """
-    In case of pip in svtype
+    Handle "<" in vcf
     """
-    if isinstance(svtype, list) and len(svtype) == 1:
+    if isinstance(svtype, list):
         svtype = svtype[0]
-    svtype = svtype.split("|")[0]
     if "<" in svtype or ">" in svtype:
         svtype = svtype.replace("<", "")
         svtype = svtype.replace(">", "")
@@ -319,7 +293,7 @@ def formatted_refgene(refgene: str, assembly: str, ts=None) -> str:
         "cdsEndStat",
         "exonFrames",
     ]
-    df = pd.read_csv(refgene, sep="\t", header=0, compression="infer")
+    df = pd.read_csv(refgene, sep="\t", header=None, compression="infer")
     assert (
         len(df.columns) == 16
     ), "Error in columns format more or less than 16 columns, expected\n\tcols: " + ",".join(cols)
@@ -461,11 +435,15 @@ def formatted_refgene(refgene: str, assembly: str, ts=None) -> str:
         + output_genes
         + ".tmp | grep 'chr_name' > "
         + output_genes
-        + " && zcat "+output_genes+".tmp | grep -v 'chr_name' | sort -k1,1V -k2,2n >> "
-        + output_genes+" && /home1/TOOLS/tools/bgzip/current/bin/bgzip "+output_genes
+        + " && zcat "
+        + output_genes
+        + ".tmp | grep -v 'chr_name' | sort -k1,1V -k2,2n >> "
+        + output_genes
+        + " && /home1/TOOLS/tools/bgzip/current/bin/bgzip "
+        + output_genes
     )
-    if os.path.exists(output_genes+".tmp"):
-        os.remove(output_genes+".tmp")
+    if os.path.exists(output_genes + ".tmp"):
+        os.remove(output_genes + ".tmp")
     print("#[INFO] Generated " + ",".join([output_genes, output_exons, output_transcripts]))
     return df
 
@@ -495,13 +473,14 @@ def _gc(filedata, span, length, out):
     tmp = []
     val = []
 
-    #200 000
+    # 200 000
     lim = span
     threshold = span
     with open(out, "w+") as o:
         o.write("\t".join(["chr_name", "start", "end", "val", "color"]) + "\n")
         for i, lines in tqdm(
-            enumerate(filedata), total=int(length[0]),
+            enumerate(filedata),
+            total=int(length[0]),
             desc="INFO GC percent, bins length: " + str(span) + "",
         ):
             if not isinstance(lines, str):
@@ -516,30 +495,30 @@ def _gc(filedata, span, length, out):
                 val.clear()
                 continue
             else:
-                #Process data
-                start = int(lines.split()[0]) #10001
-                stop = int(lines.split()[0]) + 5 #10006
-                #POS
+                # Process data
+                start = int(lines.split()[0])  # 10001
+                stop = int(lines.split()[0]) + 5  # 10006
+                # POS
                 tmp.append(start)
-                #Cast to real value, 40 = 2  60 = 3 etc
+                # Cast to real value, 40 = 2  60 = 3 etc
                 val.append(float(lines.split()[1]) / 20)
             if chr not in chr_valid():
                 continue
 
-            
-            #if lim < start: #it Start chr 1 10001
+            # if lim < start: #it Start chr 1 10001
             #    # first time only
             #    lim = start + lim
             if start >= lim or (lines.startswith("variableStep") and chr != "chr1"):
                 gc_val = round(
-                    (sum(val) / (stop - tmp[0])), 2) #nombre de gc tout les 5 diviser par le nombres de bases tot
-                
-                #dico[chr + ":" + str(tmp[0]) + "-" + str(tmp[-1])] = gc_val 
+                    (sum(val) / (stop - tmp[0])), 2
+                )  # nombre de gc tout les 5 diviser par le nombres de bases tot
+
+                # dico[chr + ":" + str(tmp[0]) + "-" + str(tmp[-1])] = gc_val
                 if gc_val < 0:
                     color = "lightblue"
                 else:
                     color = "blue"
-                #If miss gc for example due to repeat regions
+                # If miss gc for example due to repeat regions
                 if len(tmp) > 1:
                     o.write(
                         "\t".join(
@@ -556,7 +535,7 @@ def _gc(filedata, span, length, out):
                 tmp.clear()
                 val.clear()
                 lim += threshold
-                #if chr == "chr3":
+                # if chr == "chr3":
                 #    print(dico)
                 #    print(len(tmp))
                 #    print(len(val))
@@ -565,25 +544,31 @@ def _gc(filedata, span, length, out):
                 #    print(dict)
                 #    exit()
 
+
 def _gc_hg38(filedata, span, length, out):
     dico = {}
     tmp = []
-    #200 000
+    # 200 000
     val = []
     lim = span
     threshold = span
     chr_current = []
-    df_size = pd.read_csv("/home1/BAS/lamouchj/vcf2circos/Static/Assembly/hg38/GRCh38_chromFa.chromSizes", sep="\t", header=None)
+    df_size = pd.read_csv(
+        "/home1/BAS/lamouchj/vcf2circos/Static/Assembly/hg38/GRCh38_chromFa.chromSizes",
+        sep="\t",
+        header=None,
+    )
     df_size.columns = ["chrom", "size"]
-    df_size["chrom"] = "chr"+df_size["chrom"]
-    #chr_length = df_size.loc[df_size["chrom"] == chrom].loc[0].at["size"]
+    df_size["chrom"] = "chr" + df_size["chrom"]
+    # chr_length = df_size.loc[df_size["chrom"] == chrom].loc[0].at["size"]
     chr_size = {}
     for j, k in df_size.iterrows():
         chr_size[k["chrom"]] = k["size"]
     with open(out, "w+") as o:
         o.write("\t".join(["chr_name", "start", "end", "val", "color"]) + "\n")
         for i, lines in tqdm(
-            enumerate(filedata), total=length,
+            enumerate(filedata),
+            total=length,
             desc="INFO GC percent, bins length: " + str(span) + "",
         ):
             if not isinstance(lines, str):
@@ -592,36 +577,38 @@ def _gc_hg38(filedata, span, length, out):
                 lines = lines.strip()
 
             chrom = lines.split()[0]
-            
+
             if chrom not in dico:
                 dico[chrom] = {"start": [], "stop": [], "val": []}
                 lim = threshold
             if chrom not in chr_valid():
                 continue
 
-            #Process data
+            # Process data
             start = int(lines.split()[1])
             stop = int(lines.split()[2])
             dico[chrom]["start"].append(start)
             dico[chrom]["stop"].append(stop)
-            #POS
-            #tmp.append(start)
-            #Cast to real value, 40 = 2  60 = 3 etc
-            #val.append(float(lines.split()[3]) / 20)
+            # POS
+            # tmp.append(start)
+            # Cast to real value, 40 = 2  60 = 3 etc
+            # val.append(float(lines.split()[3]) / 20)
             dico[chrom]["val"].append(float(lines.split()[3]) / 20)
             if start >= lim:
-                #print(dico[chrom]["stop"][-1])
-                #print(dico[chrom]["start"][0])
-                #print(sum(dico[chrom]["val"]))
+                # print(dico[chrom]["stop"][-1])
+                # print(dico[chrom]["start"][0])
+                # print(sum(dico[chrom]["val"]))
                 gc_val = round(
-                    (sum(dico[chrom]["val"]) / (dico[chrom]["stop"][-1] - dico[chrom]["start"][0])), 2) #nombre de gc tout les stop-start diviser par le nombres de bases tot
-                
-                #dico[chr + ":" + str(tmp[0]) + "-" + str(tmp[-1])] = gc_val 
-                #if gc_val < 0:
+                    (sum(dico[chrom]["val"]) / (dico[chrom]["stop"][-1] - dico[chrom]["start"][0])),
+                    2,
+                )  # nombre de gc tout les stop-start diviser par le nombres de bases tot
+
+                # dico[chr + ":" + str(tmp[0]) + "-" + str(tmp[-1])] = gc_val
+                # if gc_val < 0:
                 #    color = "lightblue"
-                #else:
+                # else:
                 #    color = "blue"
-                #If miss gc for example due to repeat regions
+                # If miss gc for example due to repeat regions
                 o.write(
                     "\t".join(
                         [
@@ -643,7 +630,87 @@ def _gc_hg38(filedata, span, length, out):
                     print("End chr")
                 else:
                     lim += threshold
-            #chr_current.append(chrom)
+            # chr_current.append(chrom)
+
+
+def isdigit_float(string):
+    if "." in string:
+        numeric = string.split(".")[0]
+        decimal = string.split(".")[1]
+        if numeric.isdigit() and len(decimal) <= 2 and decimal.isdigit():
+            return True
+        else:
+            return False
+    else:
+        return False
+
+
+def full_split_annotSV():
+    if len(val) > 1:
+        length = len(val)
+        tmp = "|".join(val)
+        data[key] = [
+            ",".join(tmp.split("|")[length:]),
+            "|".join(tmp.split("|")[length:]),
+        ]
+
+
+def process_info_dict(data: dict) -> dict:
+    """
+    From a vcf.Record.INFO which is a dict if list contains only one string containing pipe split all values and cast string to int if values contains only digit
+    \nreturn dict formatted
+    """
+    new_data = {}
+
+    for key, val in data.items():
+        try:
+            if isinstance(val, list):
+                if len(val) == 1 and isinstance(val[0], str):
+                    if "|" in val[0]:
+                        values = val[0].split("|")
+                        new_values = []
+                        for items in values:
+                            if items.isdigit():
+                                new_values.append(int(items))
+                            elif isdigit_float(items):
+                                new_values.append(float(items))
+                            else:
+                                new_values.append(items)
+                        new_data[key] = new_values
+                    elif val[0].isdigit():
+                        new_data[key] = int(val[0])
+                    else:
+                        new_data[key] = val
+                elif len(val) > 1 and "|" in val[-1]:
+                    tmp = ",".join(val)
+                    keep = tmp.split("|")[0].split(",")
+                    keep.append("|".join(tmp.split("|")[1:]))
+                    new_data[key] = keep
+                else:
+                    new_data[key] = val
+            elif isinstance(val, str) and "|" in val:
+                new_values = []
+                values = val.split("|")
+                for items in values:
+                    if items.isdigit():
+                        new_values.append(int(items))
+                    elif isdigit_float(items):
+                        new_values.append(float(items))
+                    else:
+                        new_values.append(items)
+                new_data[key] = new_values
+            else:
+                if val.isdigit():
+                    new_data[key] = int(val)
+                elif isdigit_float(val):
+                    new_data[key] = float(val)
+                else:
+                    new_data[key] = val
+        except (TypeError, AttributeError):
+            new_data[key] = val
+    # pprint(new_data, sort_dicts=False)
+    # exit()
+    return new_data
 
 
 def process_gc_percent(filename: str, out: str) -> str:
@@ -652,7 +719,7 @@ def process_gc_percent(filename: str, out: str) -> str:
     print(out)
     if filename.endswith(".gz"):
         with gzip.open(filename, "rb") as bf:
-            #length = systemcall("zcat " + filename + " | wc -l")
+            # length = systemcall("zcat " + filename + " | wc -l")
             _gc_hg38(bf, 5000000, 439385652, out)
     else:
         f = open(filename, "r")
@@ -662,18 +729,34 @@ def process_gc_percent(filename: str, out: str) -> str:
 
 
 def pick(file):
-    df = pd.read_csv(file, sep="\t", header=None, low_memory=False, compression='infer', names=['pos', 'values'], nrows=60000000)
-    #filter = df.iloc[:3000000, :]
-    #print(filter.iloc[:10, :])
+    df = pd.read_csv(
+        file,
+        sep="\t",
+        header=None,
+        low_memory=False,
+        compression="infer",
+        names=["pos", "values"],
+        nrows=60000000,
+    )
+    # filter = df.iloc[:3000000, :]
+    # print(filter.iloc[:10, :])
     df.to_csv("pick_gc", header=False, index=False, sep="\t")
+
 
 def repeatmasker(file, out):
     """
-        Formatting repeatmasker file chr_name, start, stop, type
+    Formatting repeatmasker file chr_name, start, stop, type
     """
-    df = pd.read_csv(file, sep="\t", header=None, compression='infer')
+    df = pd.read_csv(file, sep="\t", header=None, compression="infer")
     df.columns = ["chr_name", "start", "stop", "type", "length", "strand"]
     df["val"] = 0.5
-    df = df.loc[:, ["chr_name", "start", "stop", "val",]]
+    df = df.loc[
+        :,
+        [
+            "chr_name",
+            "start",
+            "stop",
+            "val",
+        ],
+    ]
     df.to_csv(out, sep="\t", header=True, index=False)
-

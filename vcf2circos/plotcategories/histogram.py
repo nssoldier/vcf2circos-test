@@ -30,7 +30,9 @@ class Histogram_(Plotconfig):
             + ((max(self.rangescale) + 2) * self.variants_ring_height),
         }
         # print("#Range", self.rangescale)
-        self.hovertextformat = ' "<b>{}:{}-{}</b><br>{}<br><br>{}".format(a[i,0], a[i,1], a[i,2], a[i,6], a[i,8])'
+        self.hovertextformat = (
+            ' "<b>{}:{}-{}</b><br>{}<br><br>{}".format(a[i,0], a[i,1], a[i,2], a[i,6], a[i,8])'
+        )
 
         # self.hovertextformat = ""
         self.trace = {
@@ -98,9 +100,7 @@ class Histogram_(Plotconfig):
 
     def dict_to_str(self, info_field: list) -> Generator:
         for info_dict in info_field:
-            yield ";".join(
-                [str(key) + "=" + str(value) for key, value in info_dict.items()]
-            )
+            yield ";".join([str(key) + "=" + str(value) for key, value in info_dict.items()])
 
     def only_snv_indels_in_sv(self, data):
         df_data = pd.DataFrame.from_dict(data).astype(
@@ -135,9 +135,7 @@ class Histogram_(Plotconfig):
                     and si["start"] > v["start"]
                     and si["start"] < v["end"]
                 ):
-                    snv_indel_overlapp.append(
-                        [si["chr_name"], si["start"], si["ref"], si["alt"]]
-                    )
+                    snv_indel_overlapp.append([si["chr_name"], si["start"], si["ref"], si["alt"]])
                 # else:
                 #    if (
                 #        not [si["chr_name"], si["start"], si["end"]]
@@ -207,9 +205,7 @@ class Histogram_(Plotconfig):
         data["ref"].extend(ref)
         data["alt"].extend(alt)
         data["type"].extend(df_data["Variants_type"].to_list())
-        data["color"].extend(
-            list(repeat(self.colors["INTERMEDIATE"], len(df_data.index)))
-        )
+        data["color"].extend(list(repeat(self.colors["INTERMEDIATE"], len(df_data.index))))
         # data["hovertext"].extend(list(itertools.repeat("", len(df_data.index))))
         data["hovertext"].extend(
             list(
@@ -291,9 +287,7 @@ class Histogram_(Plotconfig):
         cyto["end"] = cytoband_data["end"]
         # Remember to have val column in data otherwise it leads to crash]
         cyto["val"] = list(repeat(1, len(cytoband_data["chr_name"])))
-        cyto["band_color"] = list(
-            repeat(self.colors["CYTOBAND"], len(cytoband_data["chr_name"]))
-        )
+        cyto["band_color"] = list(repeat(self.colors["CYTOBAND"], len(cytoband_data["chr_name"])))
         cyto["band"] = cytoband_data["band"]
         # Cytoband tiles 3  need fill data
         dico_cyto["file"]["dataframe"]["data"] = cyto
@@ -422,9 +416,7 @@ class Histogram_(Plotconfig):
                 list(
                     map(
                         str,
-                        chain.from_iterable(
-                            list(self.process_gene_list(self.df_data["Genes"]))
-                        ),
+                        chain.from_iterable(list(self.process_gene_list(self.df_data["Genes"]))),
                     )
                 )
             )
@@ -432,7 +424,9 @@ class Histogram_(Plotconfig):
         # print(*self.df_genes.columns)
         # print(self.df_genes.head())
         ## select genes in or batch of variations (from refeseq assembly)
-        df_filter = self.df_genes.loc[self.df_genes["gene"].isin(gene_list)]
+        df_filter = self.df_genes.loc[
+            (self.df_genes["gene"].isin(gene_list)) & (self.df_genes["chr_name"]).isin(chr_valid())
+        ]
 
         # print(*gene_list)
         # print(self.df_data["Genes"].head())
@@ -442,9 +436,7 @@ class Histogram_(Plotconfig):
             if fields != "transcript":
                 if fields == "color":
                     # data[fields] = list(self.morbid_genes(df_filter["gene"]))
-                    data[fields] = list(
-                        repeat(self.colors["GENES"], len(df_filter.index))
-                    )
+                    data[fields] = list(repeat(self.colors["GENES"], len(df_filter.index)))
                 else:
                     data[fields] = df_filter[fields].to_list()
         # pprint(data, sort_dicts=False)
@@ -497,7 +489,9 @@ class Histogram_(Plotconfig):
                         # record[i].INFO[values] is a LIST header VCF
                         if isinstance(record[i].INFO[values], list):
                             if "|" in str(record[i].INFO[values][0]):
-                                record[i].INFO[values] = int(str(record[i].INFO[values][0].split("|")[0]))
+                                record[i].INFO[values] = int(
+                                    str(record[i].INFO[values][0].split("|")[0])
+                                )
                             else:
                                 record[i].INFO[values] = int(str(record[i].INFO[values][0]))
                         elif isinstance(record[i].INFO[values], str):
@@ -594,10 +588,7 @@ class Histogram_(Plotconfig):
                     }
                     extras.append(gc_dict)
                 else:
-                    print(
-                        "[WARN GC file don't exist for assembly "
-                        + self.options["Assembly"]
-                    )
+                    print("[WARN GC file don't exist for assembly " + self.options["Assembly"])
 
         if "mappability_old" in self.options["Extra"]:
             mapp_file = osj(
@@ -607,7 +598,6 @@ class Histogram_(Plotconfig):
                 self.options["Assembly"] + ".dukeExcludeRegions.csv",
             )
             if not os.path.exists(mapp_file):
-
                 print(
                     "[WARN] Mappability Exclude Region file not in Static folder for assembly "
                     + self.options["Assembly"]
@@ -655,7 +645,7 @@ class Histogram_(Plotconfig):
                         "line": {"color": "black", "width": 0},
                     },
                 }
-                #print(data)
+                # print(data)
                 extras.append(mappa_dict)
             # print(mappa_dict)
             # exit()
@@ -667,18 +657,14 @@ class Histogram_(Plotconfig):
                 )
                 if bfiles.startswith(self.options["Assembly"] + ".blacklist")
             ][0]
-            mapp_file = osj(
-                self.options["Static"], "Assembly", self.options["Assembly"], filename
-            )
+            mapp_file = osj(self.options["Static"], "Assembly", self.options["Assembly"], filename)
             if not os.path.exists(mapp_file):
                 print(
                     "[WARN] Blacklist Region file not in Static folder for assembly "
                     + self.options["Assembly"]
                 )
             else:
-                data = pd.read_csv(
-                    mapp_file, header=None, sep="\t", compression="infer"
-                )
+                data = pd.read_csv(mapp_file, header=None, sep="\t", compression="infer")
                 data.columns = ["chr_name", "start", "end", "type"]
                 data = data.loc[data["chr_name"].isin(chr_valid())]
                 data["val"] = 2
@@ -743,7 +729,8 @@ class Histogram_(Plotconfig):
                     self.options["Assembly"] + ".repeatmasker.tsv",
                 ),
                 header=0,
-                sep="\t", compression='infer'
+                sep="\t",
+                compression="infer",
             )
             data = dat.loc[dat["chr_name"].isin(chr_valid())]
             data["val"] = 2
@@ -800,15 +787,16 @@ class Histogram_(Plotconfig):
                 + ".repeatmasker.histo.tsv"
                 + " not in Static folder"
             )
-            repeat_dict = {"show": "True",
+            repeat_dict = {
+                "show": "True",
                 "customfillcolor": "False",
                 "file": {
                     "path": osj(
-                    self.options["Static"],
-                    "Assembly",
-                    self.options["Assembly"],
-                    self.options["Assembly"] + ".repeatmasker.histo.tsv",
-                ),
+                        self.options["Static"],
+                        "Assembly",
+                        self.options["Assembly"],
+                        self.options["Assembly"] + ".repeatmasker.histo.tsv",
+                    ),
                     "header": "infer",
                     "sep": "\t",
                 },

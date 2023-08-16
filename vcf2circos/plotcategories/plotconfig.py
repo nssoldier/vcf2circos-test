@@ -14,7 +14,7 @@ import pandas as pd
 # from vcf2circos.vcfreader import VcfReader
 from os.path import join as osj
 from tqdm import tqdm
-from vcf2circos.utils import timeit, cast_svtype
+from vcf2circos.utils import timeit, cast_svtype, process_info_dict, chr_valid
 from pprint import pprint
 import vcf
 import time
@@ -148,6 +148,17 @@ class Plotconfig:
         self.breakend_record = []
         # self.breakend_genes = []
         for record in self.vcf_reader:
+            # ensure all values are list of str without taking into account type in metaheader in record.INFO
+            # if record.POS == 50000000:
+            #     print(record.INFO)
+            record.INFO = process_info_dict(record.INFO)
+            # if record.POS == 50000000:
+            #     print(record.INFO)
+            #     exit()
+            # Not secondary assembly
+            if self.chr_adapt(record) not in chr_valid():
+                continue
+
             # Could now do filter to only plot some specific gene or chromosomes
             if (
                 self.chr_adapt(record) in self.options["Chromosomes"]["list"]
@@ -166,12 +177,6 @@ class Plotconfig:
                     data["Record"].append(record)
                     data["Variants"].append(record.INFO)
                     svtype, copynumber = self.get_copynumber_type(record)
-                    #if record.CHROM == "chr6" and record.POS == 1089464612 :
-                    #    print(record)
-                    #    print(record.INFO)
-                    #    print(self.get_copynumber_type(record))
-                    #    #exit()
-                    # ensure svtype is in capslock
                     svtype = svtype.upper()
                     assert svtype in self.options["Color"], (
                         "Wrong svtype in record "
@@ -197,6 +202,12 @@ class Plotconfig:
                         if copynumber > 5 and svtype not in ["SNV", "INDEL", "OTHER"]:
                             copynumber = 5
                         data["CopyNumber"].append(copynumber)
+            assert_values_same_length(data)
+            # if record.POS == 31490262:
+            #     # print(self.get_genes_var(record))
+            #     print(data)
+            #     # print(record.INFO)
+            #     exit()
         return data
 
     def chr_adapt(self, record: object) -> str:
@@ -324,8 +335,8 @@ class Plotconfig:
         From genomic coordinate, return a list of overlapping gene (if genes are not provided in info field)\n
         Greedy for now
         """
-        if isinstance(coord[2], list):
-            coord[2] = coord[2].split("|")
+        # if isinstance(coord[2], list):
+        #    coord[2] = coord[2].split("|")
         gene_list = []
         # only chr for this variants
         refgene_chr = self.df_genes.loc[self.df_genes["chr_name"] == coord[0]]
@@ -353,77 +364,31 @@ class Plotconfig:
                 break
         return list(set(gene_list))
 
-    def string_to_unique(self, string):
-        if "|" in string:
-            return ",".join(list(set(string.split("|"))))
-        elif "," in string:
-            return ",".join(list(set(string.split(","))))
-        else:
-            return string
-
     def from_gene_to_unique(self, values: str) -> str:
         """
         example from IFT140|IFT140 to IFT140 if all values are the same otherwise keep all
         """
         if isinstance(values, str):
-            return self.string_to_unique(values)
+            return values
         elif isinstance(values, list):
-            return ",".join([self.string_to_unique(f) for f in values])
+            return ",".join(values)
         else:
             print("ERROR in Gene_name ", values)
             exit()
 
     def get_sv_length_annotations(self, record, field):
-        #if field == "SV_end":
-        #    gene_name = self.find_record_gene(
-        #        [
-        #            record.CHROM,
-        #            record.POS,
-        #            int(float(self.string_to_unique(record.INFO["SV_end"])[0])),
-        #        ]
-        #    )
-        #    return gene_name
-        #if isinstance(record.INFO[field], int):
-        #    gene_name = self.find_record_gene(
-        #        [record.CHROM, record.POS, int(record.POS) + record.INFO[field]]
-        #    )
+        # print(record.INFO)
+        # exit()
         if field in ["SV_length", "SVLEN"]:
             gene_name = self.find_record_gene(
-                [record.CHROM, record.POS, record.POS+abs(record.INFO[field])]
+                [record.CHROM, record.POS, record.POS + abs(record.INFO[field])]
             )
         elif field in ["SV_end", "END"]:
-            gene_name = self.find_record_gene(
-                [record.CHROM, record.POS, record.INFO[field]]
-            )
+            gene_name = self.find_record_gene([record.CHROM, record.POS, record.INFO[field]])
+
         else:
             gene_name = []
         return gene_name
-        #elif isinstance(record.INFO[field], list):
-        #    if isinstance(record.INFO[field][0], int):
-        #        gene_name = self.find_record_gene(
-        #            [
-        #                record.CHROM,
-        #                record.POS,
-        #                int(record.POS) + int(float(record.INFO[field][0])),
-        #            ]
-        #        )
-        #    else:
-        #        gene_name = self.find_record_gene(
-        #            [
-        #                record.CHROM,
-        #                record.POS,
-        #                int(record.POS) + int(float(self.string_to_unique(record.INFO[field][0]))),
-        #            ]
-        #        )
-        #else:
-        #    gene_name = self.find_record_gene(
-        #        [
-        #            record.CHROM,
-        #            record.POS,
-        #            int(record.POS) + int(float(self.string_to_unique(record.INFO[field])[0])),
-        #        ]
-        #    )
-        #return gene_name
 
     def get_genes_var(self, record: object) -> str:
         """
@@ -433,23 +398,35 @@ class Plotconfig:
         """
         bad_values = [None, "", "."]
         bad_svtype = ["BND", "TRA", None]
-        types_ = ["SVLEN", "SV_length","SV_end", "END"]
+        types_ = ["SVLEN", "SV_length", "SV_end", "END"]
 
         gene_name = record.INFO.get("Gene_name")
+        # if record.POS == 71552:
+        #     print(record.INFO)
+        #     exit()
         # Add chr if missing
         record.CHROM = self.chr_adapt(record)
         if not self.options["Genes"]["extend"]:
             # get overlapping genes in Gene_name INFO field
             if gene_name not in bad_values and isinstance(gene_name, str):
-                return self.from_gene_to_unique(gene_name)
-            elif isinstance(gene_name, list) and gene_name[0] not in bad_values:
-                return self.from_gene_to_unique(gene_name)
+                return gene_name
+            elif (
+                isinstance(gene_name, list)
+                and gene_name[0] not in bad_values
+                and len(gene_name) == 1
+            ):
+                return gene_name[0]
+            elif isinstance(gene_name, list) and len(gene_name) > 1:
+                return ",".join(gene_name[:-1])
             # No Gene_name annotation need to find overlapping gene in sv
             # if gene_name is None or (isinstance(gene_name, list) and gene_name[0] == None):
-        #if (
+        # if (
         #    record.INFO.get("SVTYPE") not in bad_svtype
         #    or record.INFO.get("SV_type") not in bad_svtype
-        #):
+        # ):
+        # if record.POS == 16686412:
+        #     print(record.INFO)
+        #     exit()
         if any([val for val in types_ if val in record.INFO]):
             try:
                 gene_name = self.get_sv_length_annotations(record, "SVLEN")
@@ -469,9 +446,9 @@ class Plotconfig:
                             return ",".join(gene_name)
                         except (KeyError, ValueError, TypeError):
                             print(
-                            "ERROR missing SVLEN annotation for record ",
-                            record,
-                        )
+                                "ERROR missing SVLEN annotation for record ",
+                                record,
+                            )
                         exit()
         # SNV indel
         else:
@@ -486,3 +463,16 @@ class Plotconfig:
             if not gene_name:
                 gene_name = [""]
             return ",".join(gene_name)
+
+
+def assert_values_same_length(dictionary):
+    lengths = set()
+
+    for value in dictionary.values():
+        if not isinstance(value, list):
+            raise ValueError("All values must be lists.")
+
+        lengths.add(len(value))
+
+    if len(lengths) > 1:
+        raise AssertionError("Values for different keys have different lengths.")
