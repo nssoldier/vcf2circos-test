@@ -197,8 +197,8 @@ def generate_hovertext_var(variants_list, full_annot=None, true_annot=None) -> G
                 tmp.append(": ".join([pairs[0], ",".join(crop_annotations(pairs[1]))]))
         to_add = []
         for items in tmp:
-            if len(items) > 40:
-                items = "".join(items[:40]) + "..."
+            if len(items) > 60:
+                items = "".join(items[:60]) + "..."
                 to_add.append(items)
             else:
                 to_add.append(items)
