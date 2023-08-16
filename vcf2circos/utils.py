@@ -164,6 +164,16 @@ def map_annotations(field_annot):
 def generate_hovertext_var(variants_list, full_annot=None, true_annot=None) -> Generator:
     # 30 longueur char
     # 15 hauteur annot
+    def crop_annotations(iterable):
+        # list(map(str, pairs[1]))[:-1]
+        iterable_string = list(map(str, iterable))
+        if len(iterable_string) == 1:
+            return iterable_string
+        elif len(iterable_string) == 2:
+            return [iterable_string[1]]
+        else:
+            return iterable_string[:-1]
+
     for var in variants_list:
         tmp = []
         for i, pairs in enumerate(list(zip(var.keys(), var.values()))):
@@ -182,9 +192,9 @@ def generate_hovertext_var(variants_list, full_annot=None, true_annot=None) -> G
                 if i == 15:
                     break
             if not isinstance(pairs[1], list):
-                tmp.append(":".join([pairs[0], str(pairs[1])]))
+                tmp.append(": ".join([pairs[0], str(pairs[1])]))
             else:
-                tmp.append(": ".join([pairs[0], str(pairs[1][0])]))
+                tmp.append(": ".join([pairs[0], ",".join(crop_annotations(pairs[1]))]))
         to_add = []
         for items in tmp:
             if len(items) > 40:
@@ -283,7 +293,7 @@ def formatted_refgene(refgene: str, assembly: str, ts=None) -> str:
         "cdsEndStat",
         "exonFrames",
     ]
-    df = pd.read_csv(refgene, sep="\t", header=0, compression="infer")
+    df = pd.read_csv(refgene, sep="\t", header=None, compression="infer")
     assert (
         len(df.columns) == 16
     ), "Error in columns format more or less than 16 columns, expected\n\tcols: " + ",".join(cols)
