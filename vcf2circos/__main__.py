@@ -5,7 +5,7 @@ from vcf2circos.parseargs import Parseargs
 from vcf2circos.datafactory import Datafactory
 from pprint import pprint
 from vcf2circos.utils import launch
-import subprocess
+
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "."))
 sys.path.append(os.path.abspath(os.path.join("../", "demo_data")))
@@ -42,6 +42,8 @@ def main():
     args = Parseargs().parseargs()
     # Input
     input_file = args.input
+    print(args)
+    print(args.input)
     if os.path.exists(input_file):
         input_format = pathlib.Path(input_file).suffix.replace(".", "")
         print(f"[INFO] Input file: {input_file} (format '{input_format}')")
@@ -72,7 +74,7 @@ def main():
     export_format = args.export
     if export_format:
         print(f"[INFO] Export format: {export_format}")
-        output_export_file = ".".join(output_file.split(".")[:-1]) + "." + export_format
+        output_export_file = ".".join(output_file.split(".")[:-1])+"."+export_format
         print(f"[INFO] Export file: {output_export_file}")
     # Options
     options_input = args.options or {}
@@ -96,7 +98,12 @@ def main():
                 "ERROR genome assembly "
                 + args.assembly
                 + " is not available update \n your config or choose an available among this list "
-                + ", ".join([assemb for assemb in os.listdir(osj(options["Static"], "Assembly"))])
+                + ", ".join(
+                    [
+                        assemb
+                        for assemb in os.listdir(osj(options["Static"], "Assembly"))
+                    ]
+                )
             )
             options["Assembly"] = args.assembly
     else:
@@ -114,7 +121,7 @@ def main():
         js = Datafactory(input_file, options).plot_dict()
         fig_instance = Figure(dash_dict=js, options=options)
         # Export in vcf2circos JSON
-        # if output_export_file:
+        #if output_export_file:
         #    if not os.path.exists(os.path.dirname(os.path.abspath(output_export_file))):
         #        os.mkdir(os.path.dirname(output_export_file))
         #    with open(output_export_file, "w") as ef:
@@ -132,19 +139,6 @@ def main():
     fig.update_layout(legend_title="Legend")
     fig.update_layout(legend_xanchor="right")
     fig.update_layout(legend_x=1.1)
-    fig.add_annotation(
-        xref="paper",
-        yref="paper",
-        x=0.05,
-        y=0.99,
-        xanchor="center",
-        yanchor="bottom",
-        font_family="Times New Roman",
-        font_size=18,
-        font_color="black",
-        showarrow=False,
-        text=f'Genome assembly: {options["Assembly"]}',
-    )
     # Order of the legend test
     dico = defaultdict(
         int,
@@ -174,17 +168,6 @@ def main():
             os.mkdir(os.path.dirname(output_file))
         elif output_format in ["html"]:
             plot(fig, filename=output_file)
-            # ADD favicon/home/lamouche/vcf2circos/vcf2circos/__main__.py
-            print(f"[INFO] Add favicon to {output_file}")
-            print(
-                f'sed -i \'s:<body>:<link rel="icon" href="./Images/vcf2circos.ico" type="image/x-icon">\\n<body>:\' {output_file}'
-            )
-            subprocess.run(
-                f'sed -i \'s:<body>:<link rel="icon" href="./Images/vcf2circos.ico" type="image/x-icon">\\n<body>:\' {output_file}',
-                shell=True,
-                capture_output=True,
-                text=True,
-            )
         elif output_format in [
             "png",
             "jpg",
@@ -195,7 +178,7 @@ def main():
             "eps",
             "json",
         ]:
-            # plotly.io.write_image(fig, output_export_file, format="svg")
+            #plotly.io.write_image(fig, output_export_file, format="svg")
             fig.write_image(output_file)
         else:
             print("[ERROR] output format not supported")

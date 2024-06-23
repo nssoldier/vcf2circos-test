@@ -1,0 +1,65 @@
+{
+	"General": {
+		"title": "",
+		"width": 1000,
+		"height": 1000,
+		"plot_bgcolor": "white"
+	},
+	"Assembly": "hg19",
+	"Static": "/enadisk/maison/lamouche/dev_vcf2circos/Static",
+	"Chromosomes": {
+		"list": [],
+		"all": false
+	},
+	"Genes": {
+		"only_snv_in_sv_genes": false,
+		"extend": false
+	},
+	"Variants": {
+		"annotations": {
+			"fields": [
+			"REF",
+			"ALT",
+			"Tx",
+			"SV_length",
+			"SVLEN",
+			"END",
+			"CN",
+			"Gene_name",
+			"Gene_count",
+			"DDD_HI_percent",
+			"OMIM_morbid",
+			"GnomAD_pLI",
+			"LOEUF_bin",
+			"AnnotSV_ranking_criteria",
+			"ACMG_class"
+]
+		},
+		"rings": {
+			"position": 0.5,
+			"height": 0.04,
+			"space": 0.01,
+			"nrings": 6
+		}
+	},
+	"Extra": [
+		"gc"
+	],
+	"Color": {
+		"INS": "mediumorchid",
+		"INV": "darkorange",
+		"DEL": "crimson",
+		"DUP": "royalblue",
+		"CNV": "limegreen",
+		"BND": "gold",
+		"SNV": "lightslategray",
+		"INDEL": "dimgray",
+		"OTHER": "silver",
+		"MORBID_GENES": "firebrick",
+		"GENES": "darkgray",
+		"CYTOBAND": "silver",
+		"INTERMEDIATE": "gray",
+		"GC": "darkblue",
+		"MAPPABILITY": "indianred"
+	}
+}
