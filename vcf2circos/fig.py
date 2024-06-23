@@ -18,7 +18,7 @@ from vcf2circos.utils import timeit, get_swap_dict
 from ast import literal_eval
 from scipy.spatial import KDTree
 import inspect
-from webcolors import CSS3_HEX_TO_NAMES, hex_to_rgb
+from webcolors import CSS21_HEX_TO_NAMES, hex_to_rgb
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -26,7 +26,7 @@ pd.options.mode.chained_assignment = None  # default='warn'
 # from dash_dict import *
 def convert_rgb_to_names(rgb_tuple):
     # a dictionary of all the hex and their respective names in css3
-    css3_db = CSS3_HEX_TO_NAMES
+    css3_db = CSS21_HEX_TO_NAMES
     names = []
     rgb_values = []
     for color_hex, color_name in css3_db.items():
