@@ -173,7 +173,7 @@ def main():
         if not os.path.exists(os.path.dirname(os.path.abspath(output_file))):
             os.mkdir(os.path.dirname(output_file))
         elif output_format in ["html"]:
-            plot(fig, filename=output_file)
+            plot(fig, filename=output_file, auto_open=False, auto_play=False)
             # ADD favicon/home/lamouche/vcf2circos/vcf2circos/__main__.py
             print(f"[INFO] Add favicon to {output_file}")
             print(

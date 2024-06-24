@@ -5,7 +5,7 @@
 		"height": 1000,
 		"plot_bgcolor": "white"
 	},
-	"Static": "/home1/BAS/lamouchj/config_vcf2circos_09012023/Static",
+	"Static": "./Static",
 	"Assembly": "hg19",
 	"Chromosomes": {
 		"list": [],
