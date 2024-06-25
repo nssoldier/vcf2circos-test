@@ -1,6 +1,5 @@
 from flask import Flask, request, jsonify, send_file
 import subprocess
-from matplotlib import pyplot
 import os
 
 app = Flask(__name__)
