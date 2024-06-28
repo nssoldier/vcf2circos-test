@@ -1,11 +1,14 @@
 from flask import Flask, request, jsonify, send_file
+from flask_cors import CORS, cross_origin
 import subprocess
 import os
 
 app = Flask(__name__)
-
+CORS(app)
+app.config['CORS_HEADERS'] = 'Content-Type'
 
 @app.route("/upload", methods=["POST"])
+@cross_origin()
 def upload_file():
     if "file" not in request.files:
         return jsonify({"error": "No file part in the request"}), 400
